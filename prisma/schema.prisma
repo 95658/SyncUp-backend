@@ -1,0 +1,651 @@
+// ============================================================================
+// SyncUp - Prisma Schema
+// Database: PostgreSQL
+// ============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum OrganizationStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+enum OrgMemberRole {
+  OWNER       // Created by Platform Owner, full org control
+  ADMIN       // Manage members, teams, settings
+  MEMBER      // Standard member
+  GUEST       // Limited access
+}
+
+enum OrgMemberStatus {
+  ACTIVE
+  INACTIVE    // Deactivated by admin (no org access)
+  REMOVED     // Removed from org
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}
+
+enum InvitationTarget {
+  ORG_ADMIN   // Invited by Platform Owner
+  ORG_MEMBER  // Invited by Org Admin
+}
+
+enum ChannelType {
+  PUBLIC
+  PRIVATE
+  DIRECT      // 1-on-1 DM
+  GROUP       // Group DM
+}
+
+enum ProjectStatus {
+  ACTIVE
+  ON_HOLD
+  COMPLETED
+  ARCHIVED
+  CANCELLED
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  IN_REVIEW
+  BLOCKED
+  DONE
+  CANCELLED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum MeetingStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum NotificationType {
+  TASK_ASSIGNED
+  TASK_UPDATED
+  TASK_DUE_SOON
+  TASK_OVERDUE
+  TASK_COMMENTED
+  TASK_MENTIONED
+  PROJECT_CREATED
+  PROJECT_UPDATED
+  CHANNEL_MESSAGE
+  CHANNEL_MENTIONED
+  MEETING_CREATED
+  MEETING_REMINDER
+  INVITATION_RECEIVED
+  MEMBER_JOINED
+  MEMBER_REMOVED
+  ORG_UPDATED
+}
+
+enum ActivityEntityType {
+  ORGANIZATION
+  TEAM
+  PROJECT
+  TASK
+  CHANNEL
+  MESSAGE
+  FILE
+  MEETING
+  MEMBER
+  INVITATION
+}
+
+// ============================================================================
+// USER (Platform-level account)
+// ============================================================================
+
+model User {
+  id            String      @id @default(cuid())
+  email         String      @unique
+  passwordHash  String
+  fullName      String
+  avatarUrl     String?
+  jobTitle      String?
+  phone         String?
+  timezone      String      @default("UTC")
+  language      String      @default("en")
+  status        UserStatus  @default(ACTIVE)
+  isPlatformOwner Boolean   @default(false)  // Only Ahmed
+  lastActiveAt  DateTime?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  // Relations
+  orgMemberships      OrganizationMember[]
+  sentInvitations     Invitation[]         @relation("InvitedByUser")
+  uploadedFiles       File[]
+  authoredMessages    Message[]
+  authoredComments    Comment[]
+  notifications       Notification[]
+  createdMeetings     Meeting[]            @relation("MeetingCreator")
+  activityLogs        ActivityLog[]
+
+  @@map("users")
+}
+
+// ============================================================================
+// ORGANIZATION (Tenant / Company)
+// ============================================================================
+
+model Organization {
+  id          String             @id @default(cuid())
+  name        String
+  slug        String             @unique    // URL-friendly identifier
+  logoUrl     String?
+  description String?
+  website     String?
+  status      OrganizationStatus @default(ACTIVE)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  // Relations
+  members      OrganizationMember[]
+  teams        Team[]
+  channels     Channel[]
+  projects     Project[]
+  files        File[]
+  invitations  Invitation[]
+  meetings     Meeting[]
+  activityLogs ActivityLog[]
+
+  @@map("organizations")
+}
+
+// ============================================================================
+// ORGANIZATION MEMBER (User's role within an Org)
+// ─── This is the join table that defines the user ↔ org relationship ─────────
+// ============================================================================
+
+model OrganizationMember {
+  id             String          @id @default(cuid())
+  userId         String
+  organizationId String
+  role           OrgMemberRole   @default(MEMBER)
+  status         OrgMemberStatus @default(ACTIVE)
+  joinedAt       DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  // Relations
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  teamMemberships TeamMember[]
+  projectMemberships ProjectMember[]
+  channelMemberships ChannelMember[]
+
+  @@unique([userId, organizationId])  // One membership per user per org
+  @@index([organizationId])
+  @@index([userId])
+  @@map("organization_members")
+}
+
+// ============================================================================
+// INVITATION
+// ============================================================================
+
+model Invitation {
+  id             String           @id @default(cuid())
+  organizationId String
+  email          String
+  role           OrgMemberRole    @default(MEMBER)
+  target         InvitationTarget @default(ORG_MEMBER)
+  tokenHash      String           @unique  // Hashed secure token
+  status         InvitationStatus @default(PENDING)
+  teamId         String?          // Optional: pre-assign to a team
+  invitedById    String?
+  expiresAt      DateTime
+  acceptedAt     DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  // Relations
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invitedBy      User?        @relation("InvitedByUser", fields: [invitedById], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([email])
+  @@map("invitations")
+}
+
+// ============================================================================
+// TEAM (Groups within an Organization)
+// ============================================================================
+
+model Team {
+  id             String       @id @default(cuid())
+  organizationId String
+  name           String
+  description    String?
+  avatarUrl      String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  // Relations
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  members        TeamMember[]
+  projects       ProjectTeam[]
+
+  @@index([organizationId])
+  @@map("teams")
+}
+
+model TeamMember {
+  id       String @id @default(cuid())
+  teamId   String
+  memberId String  // References OrganizationMember (not User directly)
+  joinedAt DateTime @default(now())
+
+  team   Team               @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  member OrganizationMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, memberId])
+  @@index([teamId])
+  @@map("team_members")
+}
+
+// ============================================================================
+// CHANNEL (Chat channels & DMs)
+// ============================================================================
+
+model Channel {
+  id             String      @id @default(cuid())
+  organizationId String
+  projectId      String?     // Optional: channel linked to a project
+  name           String?     // null for DMs
+  description    String?
+  type           ChannelType @default(PUBLIC)
+  isArchived     Boolean     @default(false)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  // Relations
+  organization  Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project       Project?        @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  members       ChannelMember[]
+  messages      Message[]
+
+  @@index([organizationId])
+  @@index([projectId])
+  @@map("channels")
+}
+
+model ChannelMember {
+  id              String   @id @default(cuid())
+  channelId       String
+  orgMemberId     String
+  lastReadAt      DateTime?
+  isMuted         Boolean  @default(false)
+  joinedAt        DateTime @default(now())
+
+  channel    Channel            @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  orgMember  OrganizationMember @relation(fields: [orgMemberId], references: [id], onDelete: Cascade)
+
+  @@unique([channelId, orgMemberId])
+  @@index([channelId])
+  @@map("channel_members")
+}
+
+// ============================================================================
+// MESSAGE
+// ============================================================================
+
+model Message {
+  id          String    @id @default(cuid())
+  channelId   String
+  authorId    String
+  content     String
+  parentId    String?   // For thread replies
+  isPinned    Boolean   @default(false)
+  isEdited    Boolean   @default(false)
+  editedAt    DateTime?
+  deletedAt   DateTime? // Soft delete
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  channel     Channel           @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  author      User              @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parent      Message?          @relation("MessageThreads", fields: [parentId], references: [id], onDelete: Cascade)
+  replies     Message[]         @relation("MessageThreads")
+  reactions   MessageReaction[]
+  attachments MessageAttachment[]
+
+  @@index([channelId])
+  @@index([authorId])
+  @@index([parentId])
+  @@map("messages")
+}
+
+model MessageReaction {
+  id        String   @id @default(cuid())
+  messageId String
+  userId    String
+  emoji     String
+  createdAt DateTime @default(now())
+
+  message   Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId, emoji])
+  @@map("message_reactions")
+}
+
+model MessageAttachment {
+  id        String   @id @default(cuid())
+  messageId String
+  fileId    String
+  createdAt DateTime @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  file    File    @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@map("message_attachments")
+}
+
+// ============================================================================
+// PROJECT
+// ============================================================================
+
+model Project {
+  id             String        @id @default(cuid())
+  organizationId String
+  name           String
+  description    String?
+  status         ProjectStatus @default(ACTIVE)
+  startDate      DateTime?
+  dueDate        DateTime?
+  progress       Int           @default(0) // 0-100
+  coverUrl       String?
+  archivedAt     DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  // Relations
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  members      ProjectMember[]
+  teams        ProjectTeam[]
+  tasks        Task[]
+  channels     Channel[]       // Channels linked to this project
+  files        File[]
+  meetings     Meeting[]
+
+  @@index([organizationId])
+  @@map("projects")
+}
+
+model ProjectMember {
+  id        String @id @default(cuid())
+  projectId String
+  memberId  String  // OrganizationMember
+  joinedAt  DateTime @default(now())
+
+  project Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  member  OrganizationMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, memberId])
+  @@index([projectId])
+  @@map("project_members")
+}
+
+model ProjectTeam {
+  projectId String
+  teamId    String
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  team    Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, teamId])
+  @@map("project_teams")
+}
+
+// ============================================================================
+// TASK
+// ============================================================================
+
+model Task {
+  id             String       @id @default(cuid())
+  projectId      String
+  title          String
+  description    String?
+  status         TaskStatus   @default(TODO)
+  priority       TaskPriority @default(MEDIUM)
+  dueDate        DateTime?
+  startDate      DateTime?
+  estimatedHours Float?
+  position       Int          @default(0)  // For Kanban ordering
+  parentId       String?      // For subtasks
+  deletedAt      DateTime?    // Soft delete
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  // Relations
+  project     Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  parent      Task?         @relation("Subtasks", fields: [parentId], references: [id])
+  subtasks    Task[]        @relation("Subtasks")
+  assignees   TaskAssignee[]
+  labels      TaskLabel[]
+  comments    Comment[]
+  attachments TaskAttachment[]
+
+  @@index([projectId])
+  @@index([parentId])
+  @@index([status])
+  @@map("tasks")
+}
+
+model TaskAssignee {
+  taskId    String
+  userId    String
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, userId])
+  @@map("task_assignees")
+}
+
+model Label {
+  id             String  @id @default(cuid())
+  organizationId String
+  name           String
+  color          String  // Hex color
+  createdAt      DateTime @default(now())
+
+  tasks TaskLabel[]
+
+  @@unique([organizationId, name])
+  @@map("labels")
+}
+
+model TaskLabel {
+  taskId  String
+  labelId String
+
+  task  Task  @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  label Label @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, labelId])
+  @@map("task_labels")
+}
+
+model TaskAttachment {
+  id        String   @id @default(cuid())
+  taskId    String
+  fileId    String
+  createdAt DateTime @default(now())
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  file File @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@map("task_attachments")
+}
+
+// ============================================================================
+// COMMENT
+// ============================================================================
+
+model Comment {
+  id        String    @id @default(cuid())
+  taskId    String
+  authorId  String
+  content   String
+  parentId  String?
+  isEdited  Boolean   @default(false)
+  editedAt  DateTime?
+  deletedAt DateTime? // Soft delete
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  task    Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  author  User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parent  Comment? @relation("CommentReplies", fields: [parentId], references: [id])
+  replies Comment[] @relation("CommentReplies")
+
+  @@index([taskId])
+  @@map("comments")
+}
+
+// ============================================================================
+// FILE
+// ============================================================================
+
+model File {
+  id             String    @id @default(cuid())
+  organizationId String
+  projectId      String?
+  uploadedById   String
+  name           String    // Original filename
+  key            String    @unique  // S3 object key
+  mimeType       String
+  size           BigInt    // Bytes
+  url            String?   // Public URL (if public)
+  deletedAt      DateTime? // Soft delete
+  createdAt      DateTime  @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project      Project?     @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  uploadedBy   User         @relation(fields: [uploadedById], references: [id])
+
+  messageAttachments MessageAttachment[]
+  taskAttachments    TaskAttachment[]
+
+  @@index([organizationId])
+  @@index([projectId])
+  @@map("files")
+}
+
+// ============================================================================
+// MEETING
+// ============================================================================
+
+model Meeting {
+  id             String        @id @default(cuid())
+  organizationId String
+  projectId      String?
+  title          String
+  description    String?
+  status         MeetingStatus @default(SCHEDULED)
+  startTime      DateTime
+  endTime        DateTime
+  externalLink   String?       // Zoom/Meet link
+  notes          String?
+  createdById    String
+  isRecurring    Boolean       @default(false)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  organization  Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project       Project?         @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  createdBy     User             @relation("MeetingCreator", fields: [createdById], references: [id])
+  participants  MeetingParticipant[]
+
+  @@index([organizationId])
+  @@index([startTime])
+  @@map("meetings")
+}
+
+model MeetingParticipant {
+  meetingId String
+  userId    String
+
+  meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+
+  @@id([meetingId, userId])
+  @@map("meeting_participants")
+}
+
+// ============================================================================
+// NOTIFICATION
+// ============================================================================
+
+model Notification {
+  id         String           @id @default(cuid())
+  userId     String
+  type       NotificationType
+  title      String
+  body       String?
+  entityType String?          // e.g. "task", "project"
+  entityId   String?          // ID of the related entity
+  isRead     Boolean          @default(false)
+  readAt     DateTime?
+  createdAt  DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([userId])
+  @@map("notifications")
+}
+
+// ============================================================================
+// ACTIVITY LOG (Audit Trail)
+// ============================================================================
+
+model ActivityLog {
+  id             String             @id @default(cuid())
+  organizationId String
+  actorId        String?            // Who performed the action (null = system)
+  entityType     ActivityEntityType
+  entityId       String
+  action         String             // e.g. "created", "updated", "deleted", "status_changed"
+  metadata       Json?              // Changed fields, old/new values
+  createdAt      DateTime           @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  actor        User?        @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([entityType, entityId])
+  @@index([actorId])
+  @@map("activity_logs")
+}

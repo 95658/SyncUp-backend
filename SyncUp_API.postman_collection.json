@@ -1,0 +1,2291 @@
+{
+  "info": {
+    "_postman_id": "syncup-b2b-saas-platform-v1",
+    "name": "SyncUp API - Private B2B SaaS Platform",
+    "description": "# SyncUp REST API Collection (NestJS 10 + Prisma + PostgreSQL)\n\nComprehensive, production-grade Postman collection covering all 40 endpoints across 8 core modules.\n\n---\n\n### 🚀 Quick Start Guide\n1. **Import:** Import this file (`SyncUp_API.postman_collection.json`) into Postman.\n2. **Authenticate:** Open **01. Authentication** folder and click **Send** on either:\n   - **1.1 Login - Platform Owner** (Super Admin privileges: `aabdelfatah732@gmail.com`)\n   - **1.2 Login - Libro Admin** (Organization Admin privileges: `zghabour@gmail.com`)\n   - **1.3 Login - Dipdux Admin** (Organization Admin privileges: `sara@dipdux.com`)\n3. **Automated Variables:** The test scripts automatically extract:\n   - `{{access_token}}` (injected into Bearer Authorization for all requests)\n   - `{{refresh_token}}`\n   - `{{orgId}}` (active organization ID)\n   - `{{userId}}`\n4. **Subsequent Actions:** When you create a Project, Task, Channel, or Message, the newly generated IDs (`{{projectId}}`, `{{taskId}}`, `{{channelId}}`, `{{messageId}}`) are automatically saved to your collection variables!",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:4000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refresh_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "platform_owner_email",
+      "value": "aabdelfatah732@gmail.com",
+      "type": "string"
+    },
+    {
+      "key": "platform_owner_password",
+      "value": "SyncUp#Ahmed2026!Secured",
+      "type": "string"
+    },
+    {
+      "key": "libro_admin_email",
+      "value": "zghabour@gmail.com",
+      "type": "string"
+    },
+    {
+      "key": "libro_admin_password",
+      "value": "Libro#Ziad2026!Secured",
+      "type": "string"
+    },
+    {
+      "key": "dipdux_admin_email",
+      "value": "sara@dipdux.com",
+      "type": "string"
+    },
+    {
+      "key": "dipdux_admin_password",
+      "value": "SyncUp#Ahmed2026!Secured",
+      "type": "string"
+    },
+    {
+      "key": "orgId",
+      "value": "cmvplrf7w0001n5b4ntdb98a5",
+      "type": "string"
+    },
+    {
+      "key": "dipduxOrgId",
+      "value": "cmvpjt0po000178qgvqg6o0b6",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "cmvpjt0pg000078qgscfe8s9z",
+      "type": "string"
+    },
+    {
+      "key": "projectId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "taskId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "subtaskId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "channelId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "messageId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "memberId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "invitationId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "invitationToken",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "01. Authentication",
+      "description": "User login, token refresh, invitation acceptance, password change, and session logout.",
+      "item": [
+        {
+          "name": "1.1 Login - Platform Owner",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Login as Platform Owner (Ahmed Abdelfatah). Automatically stores access_token and refresh_token in variables.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{platform_owner_email}}\",\n  \"password\": \"{{platform_owner_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 or 201\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "var data = pm.response.json();",
+                  "if (data.accessToken) {",
+                  "    pm.collectionVariables.set(\"access_token\", data.accessToken);",
+                  "    pm.collectionVariables.set(\"orgId\", \"cmvplrf7w0001n5b4ntdb98a5\");",
+                  "    console.log(\"Successfully set access_token for Platform Owner\");",
+                  "}",
+                  "if (data.refreshToken) {",
+                  "    pm.collectionVariables.set(\"refresh_token\", data.refreshToken);",
+                  "}",
+                  "if (data.user && data.user.id) {",
+                  "    pm.collectionVariables.set(\"userId\", data.user.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.2 Login - Libro Admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Login as Libro Organization Admin (Ziad Ghabour). Automatically sets access_token and orgId.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{libro_admin_email}}\",\n  \"password\": \"{{libro_admin_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 or 201\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "var data = pm.response.json();",
+                  "if (data.accessToken) {",
+                  "    pm.collectionVariables.set(\"access_token\", data.accessToken);",
+                  "    pm.collectionVariables.set(\"orgId\", \"cmvplrf7w0001n5b4ntdb98a5\");",
+                  "    console.log(\"Successfully set access_token and orgId for Libro\");",
+                  "}",
+                  "if (data.refreshToken) {",
+                  "    pm.collectionVariables.set(\"refresh_token\", data.refreshToken);",
+                  "}",
+                  "if (data.user && data.user.id) {",
+                  "    pm.collectionVariables.set(\"userId\", data.user.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.3 Login - Dipdux Admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Login as Dipdux Admin (Sara Hassan).",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{dipdux_admin_email}}\",\n  \"password\": \"{{dipdux_admin_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 or 201\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "var data = pm.response.json();",
+                  "if (data.accessToken) {",
+                  "    pm.collectionVariables.set(\"access_token\", data.accessToken);",
+                  "    pm.collectionVariables.set(\"orgId\", \"cmvpjt0po000178qgvqg6o0b6\");",
+                  "    console.log(\"Successfully set access_token and orgId for Dipdux\");",
+                  "}",
+                  "if (data.refreshToken) {",
+                  "    pm.collectionVariables.set(\"refresh_token\", data.refreshToken);",
+                  "}",
+                  "if (data.user && data.user.id) {",
+                  "    pm.collectionVariables.set(\"userId\", data.user.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.4 Get Current User (Me)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            },
+            "description": "Retrieves current authenticated user profile, platform owner flag, and memberships."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var data = pm.response.json();",
+                  "pm.expect(data).to.have.property(\"email\");"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.5 Refresh Access Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "refresh"
+              ]
+            },
+            "description": "Uses active refresh_token to acquire a fresh JWT access_token.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refresh_token}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Token refreshed successfully\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "var data = pm.response.json();",
+                  "if (data.accessToken) {",
+                  "    pm.collectionVariables.set(\"access_token\", data.accessToken);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.6 Change Current Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/change-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "change-password"
+              ]
+            },
+            "description": "Allows logged in user to safely change password.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"CurrentStrongPass123!\",\n  \"newPassword\": \"NewSecurePassword2026!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.7 Accept Invitation & Set Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/accept-invitation",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "accept-invitation"
+              ]
+            },
+            "description": "Accepts email invitation link token, registers user profile and sets their initial password.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{invitationToken}}\",\n  \"fullName\": \"Youssef Nabil\",\n  \"password\": \"SecureUserPassword2026!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Invitation accepted successfully\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "var data = pm.response.json();",
+                  "if (data.accessToken) {",
+                  "    pm.collectionVariables.set(\"access_token\", data.accessToken);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.8 Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            },
+            "description": "Terminates user session and revokes tokens."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "02. Super Admin (Platform Owner Only)",
+      "description": "Dedicated governance endpoints restricted to the Platform Owner (aabdelfatah732@gmail.com).",
+      "item": [
+        {
+          "name": "2.1 Platform Usage Overview & Analytics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/analytics",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "analytics"
+              ]
+            },
+            "description": "Aggregated platform metrics: organization counts, active users, project numbers, and storage usage."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var data = pm.response.json();",
+                  "pm.expect(data).to.have.property(\"totalOrganizations\");",
+                  "pm.expect(data).to.have.property(\"totalUsers\");"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.2 List All Organizations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/organizations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "organizations"
+              ]
+            },
+            "description": "Retrieves all tenant organizations on the platform with member counts and subscription status."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var data = pm.response.json();",
+                  "pm.expect(data).to.be.an(\"array\");",
+                  "if (data.length > 0) {",
+                  "    console.log(\"Found \" + data.length + \" organizations\");",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.3 Create & Provision Organization",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/organizations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "organizations"
+              ]
+            },
+            "description": "Provisions a new tenant organization and generates the first administrator invitation.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Apex Solutions\",\n  \"adminName\": \"Hesham Mostafa\",\n  \"adminEmail\": \"hesham@apexsolutions.io\",\n  \"plan\": \"ENTERPRISE\",\n  \"sendInvitation\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Organization created\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "var data = pm.response.json();",
+                  "if (data.organization && data.organization.id) {",
+                  "    pm.collectionVariables.set(\"orgId\", data.organization.id);",
+                  "    console.log(\"Set orgId to: \" + data.organization.id);",
+                  "}",
+                  "if (data.invitationToken) {",
+                  "    pm.collectionVariables.set(\"invitationToken\", data.invitationToken);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.4 Update Organization Status (Suspend / Activate)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/organizations/:id/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "organizations",
+                ":id",
+                "status"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{orgId}}",
+                  "description": "Path parameter id"
+                }
+              ]
+            },
+            "description": "Toggles organization lifecycle state between ACTIVE and SUSPENDED.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"ACTIVE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2.5 List All Organization Admins (FR-PLAT-005)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/administrators",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "administrators"
+              ]
+            },
+            "description": "Returns all company owners and administrators across all tenant workspaces."
+          },
+          "response": []
+        },
+        {
+          "name": "2.6 List All Platform Users (FR-PLAT-006)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "users"
+              ]
+            },
+            "description": "Global directory of all registered users across the platform."
+          },
+          "response": []
+        },
+        {
+          "name": "2.7 List All Platform Invitations (FR-PLAT-007)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/invitations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "invitations"
+              ]
+            },
+            "description": "Returns pending, accepted, and expired invitations across all workspaces."
+          },
+          "response": []
+        },
+        {
+          "name": "2.8 List Platform Audit Logs (FR-AUD-001/002)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/audit-logs?limit=50",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-admin",
+                "audit-logs"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50",
+                  "description": "Maximum number of audit logs to retrieve",
+                  "disabled": false
+                }
+              ]
+            },
+            "description": "Comprehensive audit trail of security and governance actions."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "03. Users Profile",
+      "description": "Profile retrieval and updates for individual members.",
+      "item": [
+        {
+          "name": "3.1 Get Current User Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "profile"
+              ]
+            },
+            "description": "Fetches detailed profile information for the authenticated user."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var data = pm.response.json();",
+                  "if (data.id) {",
+                  "    pm.collectionVariables.set(\"userId\", data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.2 Update Current User Profile",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "profile"
+              ]
+            },
+            "description": "Updates full name, job title, phone number, timezone and UI language.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Ahmed Abdelfatah\",\n  \"jobTitle\": \"Principal Software Architect\",\n  \"phone\": \"+20 100 000 0000\",\n  \"timezone\": \"Africa/Cairo\",\n  \"language\": \"ar\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3.3 Get User By ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{userId}}",
+                  "description": "Path parameter id"
+                }
+              ]
+            },
+            "description": "Fetches public profile of a user by their unique ID."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "04. Organizations & Members",
+      "description": "Tenant organization details, team member directory, role assignment, and invitations.",
+      "item": [
+        {
+          "name": "4.0 Get My Organizations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organizations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations"
+              ]
+            },
+            "description": "Returns all organizations the current authenticated user belongs to (or all if platform owner)."
+          },
+          "response": []
+        },
+        {
+          "name": "4.1 Get Organization Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organizations/:orgId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations",
+                ":orgId"
+              ],
+              "variable": [
+                {
+                  "key": "orgId",
+                  "value": "{{orgId}}",
+                  "description": "Path parameter orgId"
+                }
+              ]
+            },
+            "description": "Retrieves current organization profile, plan tier, and settings."
+          },
+          "response": []
+        },
+        {
+          "name": "4.2 List Organization Members",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organizations/:orgId/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations",
+                ":orgId",
+                "members"
+              ],
+              "variable": [
+                {
+                  "key": "orgId",
+                  "value": "{{orgId}}",
+                  "description": "Path parameter orgId"
+                }
+              ]
+            },
+            "description": "Lists all team members belonging to this organization."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var data = pm.response.json();",
+                  "pm.expect(data).to.be.an(\"array\");",
+                  "if (data.length > 0 && data[0].id) {",
+                  "    pm.collectionVariables.set(\"memberId\", data[0].id);",
+                  "    console.log(\"Captured memberId: \" + data[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4.3 Update Member Role (Admin/Owner only)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organizations/:orgId/members/:memberId/role",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations",
+                ":orgId",
+                "members",
+                ":memberId",
+                "role"
+              ],
+              "variable": [
+                {
+                  "key": "orgId",
+                  "value": "{{orgId}}",
+                  "description": "Path parameter orgId"
+                },
+                {
+                  "key": "memberId",
+                  "value": "{{memberId}}",
+                  "description": "Path parameter memberId"
+                }
+              ]
+            },
+            "description": "Updates member workspace permission: OWNER, ADMIN, MEMBER, or GUEST.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"ADMIN\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4.4 Remove Member from Organization",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organizations/:orgId/members/:memberId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations",
+                ":orgId",
+                "members",
+                ":memberId"
+              ],
+              "variable": [
+                {
+                  "key": "orgId",
+                  "value": "{{orgId}}",
+                  "description": "Path parameter orgId"
+                },
+                {
+                  "key": "memberId",
+                  "value": "{{memberId}}",
+                  "description": "Path parameter memberId"
+                }
+              ]
+            },
+            "description": "Revokes membership and removes member from workspace."
+          },
+          "response": []
+        },
+        {
+          "name": "4.5 Send Member Invitation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organizations/:orgId/invitations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations",
+                ":orgId",
+                "invitations"
+              ],
+              "variable": [
+                {
+                  "key": "orgId",
+                  "value": "{{orgId}}",
+                  "description": "Path parameter orgId"
+                }
+              ]
+            },
+            "description": "Creates and dispatches an invitation for a new colleague to join the workspace.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"backend.engineer@syncup.local\",\n  \"role\": \"MEMBER\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Invitation created\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "var data = pm.response.json();",
+                  "if (data.id) {",
+                  "    pm.collectionVariables.set(\"invitationId\", data.id);",
+                  "}",
+                  "if (data.token) {",
+                  "    pm.collectionVariables.set(\"invitationToken\", data.token);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4.6 List Pending Invitations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organizations/:orgId/invitations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations",
+                ":orgId",
+                "invitations"
+              ],
+              "variable": [
+                {
+                  "key": "orgId",
+                  "value": "{{orgId}}",
+                  "description": "Path parameter orgId"
+                }
+              ]
+            },
+            "description": "Lists all pending unaccepted workspace invitations."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var data = pm.response.json();",
+                  "if (data.length > 0 && data[0].id) {",
+                  "    pm.collectionVariables.set(\"invitationId\", data[0].id);",
+                  "    if (data[0].token) {",
+                  "        pm.collectionVariables.set(\"invitationToken\", data[0].token);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4.7 Revoke Pending Invitation",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organizations/:orgId/invitations/:invitationId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations",
+                ":orgId",
+                "invitations",
+                ":invitationId"
+              ],
+              "variable": [
+                {
+                  "key": "orgId",
+                  "value": "{{orgId}}",
+                  "description": "Path parameter orgId"
+                },
+                {
+                  "key": "invitationId",
+                  "value": "{{invitationId}}",
+                  "description": "Path parameter invitationId"
+                }
+              ]
+            },
+            "description": "Revokes and invalidates a pending invitation token."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "05. Projects",
+      "description": "Project portfolios, progress tracking, and deliverables.",
+      "item": [
+        {
+          "name": "5.1 List Projects in Organization",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organizations/:orgId/projects",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations",
+                ":orgId",
+                "projects"
+              ],
+              "variable": [
+                {
+                  "key": "orgId",
+                  "value": "{{orgId}}",
+                  "description": "Path parameter orgId"
+                }
+              ]
+            },
+            "description": "Lists all projects belonging to the active organization."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var data = pm.response.json();",
+                  "pm.expect(data).to.be.an(\"array\");",
+                  "if (data.length > 0 && data[0].id) {",
+                  "    pm.collectionVariables.set(\"projectId\", data[0].id);",
+                  "    console.log(\"Captured projectId: \" + data[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5.2 Create New Project",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organizations/:orgId/projects",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations",
+                ":orgId",
+                "projects"
+              ],
+              "variable": [
+                {
+                  "key": "orgId",
+                  "value": "{{orgId}}",
+                  "description": "Path parameter orgId"
+                }
+              ]
+            },
+            "description": "Creates a new project in the organization and captures projectId.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Core SaaS Backend Architecture\",\n  \"description\": \"Refactoring NestJS modular services, caching layer, and WebSocket performance\",\n  \"status\": \"ACTIVE\",\n  \"dueDate\": \"2026-12-31T23:59:59Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Project created successfully\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "var data = pm.response.json();",
+                  "if (data.id) {",
+                  "    pm.collectionVariables.set(\"projectId\", data.id);",
+                  "    console.log(\"Set projectId to: \" + data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5.3 Get Project Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organizations/:orgId/projects/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations",
+                ":orgId",
+                "projects",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "orgId",
+                  "value": "{{orgId}}",
+                  "description": "Path parameter orgId"
+                },
+                {
+                  "key": "id",
+                  "value": "{{projectId}}",
+                  "description": "Path parameter id"
+                }
+              ]
+            },
+            "description": "Fetches project specifications, associated tasks, and completion metrics."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "06. Tasks & Subtasks",
+      "description": "Kanban tasks, status changes, subtasks checklist, and activity comments.",
+      "item": [
+        {
+          "name": "6.1 List Tasks in Organization",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organizations/:orgId/tasks?projectId={{projectId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations",
+                ":orgId",
+                "tasks"
+              ],
+              "query": [
+                {
+                  "key": "projectId",
+                  "value": "{{projectId}}",
+                  "description": "Optional project filter",
+                  "disabled": false
+                }
+              ],
+              "variable": [
+                {
+                  "key": "orgId",
+                  "value": "{{orgId}}",
+                  "description": "Path parameter orgId"
+                }
+              ]
+            },
+            "description": "Returns all tasks in workspace, optionally filtered by projectId."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var data = pm.response.json();",
+                  "pm.expect(data).to.be.an(\"array\");",
+                  "if (data.length > 0 && data[0].id) {",
+                  "    pm.collectionVariables.set(\"taskId\", data[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "6.2 Create New Task",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organizations/:orgId/tasks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations",
+                ":orgId",
+                "tasks"
+              ],
+              "variable": [
+                {
+                  "key": "orgId",
+                  "value": "{{orgId}}",
+                  "description": "Path parameter orgId"
+                }
+              ]
+            },
+            "description": "Creates a new task assigned to the specified project.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"projectId\": \"{{projectId}}\",\n  \"title\": \"Implement Postman Collection & Automated API Tests\",\n  \"description\": \"Provide v2.1.0 Postman collection with auto-token scripting and full endpoint coverage\",\n  \"status\": \"TODO\",\n  \"priority\": \"HIGH\",\n  \"dueDate\": \"2026-11-01T12:00:00Z\",\n  \"assigneeIds\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Task created successfully\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "var data = pm.response.json();",
+                  "if (data.id) {",
+                  "    pm.collectionVariables.set(\"taskId\", data.id);",
+                  "    console.log(\"Captured taskId: \" + data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "6.3 Get Task Details by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organizations/:orgId/tasks/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations",
+                ":orgId",
+                "tasks",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "orgId",
+                  "value": "{{orgId}}",
+                  "description": "Path parameter orgId"
+                },
+                {
+                  "key": "id",
+                  "value": "{{taskId}}",
+                  "description": "Path parameter id"
+                }
+              ]
+            },
+            "description": "Returns task details, assignees, subtasks, and comments."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var data = pm.response.json();",
+                  "if (data.subtasks && data.subtasks.length > 0) {",
+                  "    pm.collectionVariables.set(\"subtaskId\", data.subtasks[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "6.4 Update Task Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organizations/:orgId/tasks/:id/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations",
+                ":orgId",
+                "tasks",
+                ":id",
+                "status"
+              ],
+              "variable": [
+                {
+                  "key": "orgId",
+                  "value": "{{orgId}}",
+                  "description": "Path parameter orgId"
+                },
+                {
+                  "key": "id",
+                  "value": "{{taskId}}",
+                  "description": "Path parameter id"
+                }
+              ]
+            },
+            "description": "Updates task status: TODO, IN_PROGRESS, IN_REVIEW, BLOCKED, DONE, or CANCELLED.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"IN_PROGRESS\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "6.5 Add Subtask to Task",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organizations/:orgId/tasks/:id/subtasks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations",
+                ":orgId",
+                "tasks",
+                ":id",
+                "subtasks"
+              ],
+              "variable": [
+                {
+                  "key": "orgId",
+                  "value": "{{orgId}}",
+                  "description": "Path parameter orgId"
+                },
+                {
+                  "key": "id",
+                  "value": "{{taskId}}",
+                  "description": "Path parameter id"
+                }
+              ]
+            },
+            "description": "Appends a new checklist subtask to the parent task.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Verify Bearer token rotation in pre-request scripts\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Subtask added\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "var data = pm.response.json();",
+                  "if (data.id) {",
+                  "    pm.collectionVariables.set(\"subtaskId\", data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "6.6 Toggle Subtask Completion",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organizations/:orgId/tasks/:id/subtasks/:subtaskId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations",
+                ":orgId",
+                "tasks",
+                ":id",
+                "subtasks",
+                ":subtaskId"
+              ],
+              "variable": [
+                {
+                  "key": "orgId",
+                  "value": "{{orgId}}",
+                  "description": "Path parameter orgId"
+                },
+                {
+                  "key": "id",
+                  "value": "{{taskId}}",
+                  "description": "Path parameter id"
+                },
+                {
+                  "key": "subtaskId",
+                  "value": "{{subtaskId}}",
+                  "description": "Path parameter subtaskId"
+                }
+              ]
+            },
+            "description": "Inverts the isCompleted boolean flag of the specified subtask.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "6.7 Post Comment on Task",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organizations/:orgId/tasks/:id/comments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations",
+                ":orgId",
+                "tasks",
+                ":id",
+                "comments"
+              ],
+              "variable": [
+                {
+                  "key": "orgId",
+                  "value": "{{orgId}}",
+                  "description": "Path parameter orgId"
+                },
+                {
+                  "key": "id",
+                  "value": "{{taskId}}",
+                  "description": "Path parameter id"
+                }
+              ]
+            },
+            "description": "Adds an audit/discussion comment to the task activity feed.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Postman collection created and verified against all controller routes.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "07. Channels",
+      "description": "Topic-based channels, team chat spaces, and project discussions.",
+      "item": [
+        {
+          "name": "7.1 List Channels in Organization",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organizations/:orgId/channels",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations",
+                ":orgId",
+                "channels"
+              ],
+              "variable": [
+                {
+                  "key": "orgId",
+                  "value": "{{orgId}}",
+                  "description": "Path parameter orgId"
+                }
+              ]
+            },
+            "description": "Lists all available channels in the organization."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var data = pm.response.json();",
+                  "pm.expect(data).to.be.an(\"array\");",
+                  "if (data.length > 0 && data[0].id) {",
+                  "    pm.collectionVariables.set(\"channelId\", data[0].id);",
+                  "    console.log(\"Captured channelId: \" + data[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "7.2 Create New Channel",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organizations/:orgId/channels",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations",
+                ":orgId",
+                "channels"
+              ],
+              "variable": [
+                {
+                  "key": "orgId",
+                  "value": "{{orgId}}",
+                  "description": "Path parameter orgId"
+                }
+              ]
+            },
+            "description": "Creates a new public or private communication channel.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"engineering\",\n  \"description\": \"Engineering team discussions and architectural RFCs\",\n  \"type\": \"PUBLIC\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Channel created\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "var data = pm.response.json();",
+                  "if (data.id) {",
+                  "    pm.collectionVariables.set(\"channelId\", data.id);",
+                  "    console.log(\"Set channelId to: \" + data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "08. Messages & Threads",
+      "description": "Real-time message history, sending messages, thread replies, and emoji reactions.",
+      "item": [
+        {
+          "name": "8.1 List Messages in Channel",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organizations/:orgId/channels/:channelId/messages?limit=50",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations",
+                ":orgId",
+                "channels",
+                ":channelId",
+                "messages"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50",
+                  "description": "Number of recent messages to return",
+                  "disabled": false
+                }
+              ],
+              "variable": [
+                {
+                  "key": "orgId",
+                  "value": "{{orgId}}",
+                  "description": "Path parameter orgId"
+                },
+                {
+                  "key": "channelId",
+                  "value": "{{channelId}}",
+                  "description": "Path parameter channelId"
+                }
+              ]
+            },
+            "description": "Retrieves message history for a channel with reactions and thread reply counts."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var data = pm.response.json();",
+                  "pm.expect(data).to.be.an(\"array\");",
+                  "if (data.length > 0 && data[0].id) {",
+                  "    pm.collectionVariables.set(\"messageId\", data[0].id);",
+                  "    console.log(\"Captured messageId: \" + data[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "8.2 Send Message to Channel",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organizations/:orgId/channels/:channelId/messages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations",
+                ":orgId",
+                "channels",
+                ":channelId",
+                "messages"
+              ],
+              "variable": [
+                {
+                  "key": "orgId",
+                  "value": "{{orgId}}",
+                  "description": "Path parameter orgId"
+                },
+                {
+                  "key": "channelId",
+                  "value": "{{channelId}}",
+                  "description": "Path parameter channelId"
+                }
+              ]
+            },
+            "description": "Publishes a new message to the channel and broadcasts via WebSockets.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Hello everyone! The Postman collection is ready and fully functional 🚀\",\n  \"parentId\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Message sent successfully\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "var data = pm.response.json();",
+                  "if (data.id) {",
+                  "    pm.collectionVariables.set(\"messageId\", data.id);",
+                  "    console.log(\"Captured messageId: \" + data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "8.3 Toggle Emoji Reaction on Message",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organizations/:orgId/messages/:messageId/reactions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations",
+                ":orgId",
+                "messages",
+                ":messageId",
+                "reactions"
+              ],
+              "variable": [
+                {
+                  "key": "orgId",
+                  "value": "{{orgId}}",
+                  "description": "Path parameter orgId"
+                },
+                {
+                  "key": "messageId",
+                  "value": "{{messageId}}",
+                  "description": "Path parameter messageId"
+                }
+              ]
+            },
+            "description": "Toggles an emoji reaction (adds if not reacted, removes if already reacted).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"emoji\": \"👍\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "8.4 Get Thread Replies for Message",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organizations/:orgId/messages/:messageId/thread",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations",
+                ":orgId",
+                "messages",
+                ":messageId",
+                "thread"
+              ],
+              "variable": [
+                {
+                  "key": "orgId",
+                  "value": "{{orgId}}",
+                  "description": "Path parameter orgId"
+                },
+                {
+                  "key": "messageId",
+                  "value": "{{messageId}}",
+                  "description": "Path parameter messageId"
+                }
+              ]
+            },
+            "description": "Fetches threaded replies belonging to a specific root message."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
