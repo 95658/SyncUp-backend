@@ -6,6 +6,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { OrganizationsService } from './organizations.service';
 import { CreateInvitationDto } from './dto/create-invitation.dto';
 import { UpdateMemberRoleDto } from './dto/update-member-role.dto';
+import { UpdateOrgSettingsDto } from './dto/update-org-settings.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 
@@ -28,6 +29,24 @@ export class OrganizationsController {
     return this.orgsService.findOne(orgId, userId);
   }
 
+  // ─── Settings ─────────────────────────────────────────────────────────────────
+
+  @Get(':orgId/settings')
+  @ApiOperation({ summary: 'Get organization settings and workflow defaults' })
+  getSettings(@Param('orgId') orgId: string, @CurrentUser('id') userId: string) {
+    return this.orgsService.getSettings(orgId, userId);
+  }
+
+  @Patch(':orgId/settings')
+  @ApiOperation({ summary: 'Update organization settings (Owner/Admin only)' })
+  updateSettings(
+    @Param('orgId') orgId: string,
+    @CurrentUser('id') userId: string,
+    @Body() dto: UpdateOrgSettingsDto,
+  ) {
+    return this.orgsService.updateSettings(orgId, userId, dto);
+  }
+
   // ─── Members ──────────────────────────────────────────────────────────────────
 
   @Get(':orgId/members')
@@ -45,6 +64,17 @@ export class OrganizationsController {
     @Body() dto: UpdateMemberRoleDto,
   ) {
     return this.orgsService.updateMemberRole(orgId, memberId, userId, dto);
+  }
+
+  @Patch(':orgId/members/:memberId/status')
+  @ApiOperation({ summary: 'Update member status (ACTIVE or SUSPENDED) (Admin/Owner only)' })
+  updateMemberStatus(
+    @Param('orgId') orgId: string,
+    @Param('memberId') memberId: string,
+    @CurrentUser('id') userId: string,
+    @Body('status') status: string,
+  ) {
+    return this.orgsService.updateMemberStatus(orgId, memberId, userId, status);
   }
 
   @Delete(':orgId/members/:memberId')
