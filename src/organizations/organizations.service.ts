@@ -336,6 +336,12 @@ export class OrganizationsService {
       return { id: 'platform-owner', userId, organizationId: orgId, role: OrgMemberRole.OWNER, status: OrgMemberStatus.ACTIVE } as any;
     }
 
+    // Verify organization is not suspended for non-platform owners
+    const org = await this.prisma.organization.findUnique({ where: { id: orgId } }).catch(() => null);
+    if (org && org.status === 'SUSPENDED') {
+      throw new ForbiddenException('This organization is currently suspended. Access is restricted.');
+    }
+
     const membership = await this.prisma.organizationMember.findFirst({
       where: { organizationId: orgId, userId, status: 'ACTIVE' },
     }).catch(() => null);

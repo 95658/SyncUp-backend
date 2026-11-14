@@ -38,6 +38,40 @@ export class AuthService {
       throw new UnauthorizedException('Your account has been deactivated. Contact your admin.');
     }
 
+    // Check if non-platform owner's organizations are all suspended or if invitation is pending
+    if (!user.isPlatformOwner) {
+      // Check if user has pending invitation that has not been accepted
+      const pendingInvites = await this.prisma.invitation.findMany({
+        where: {
+          email: user.email.toLowerCase(),
+          status: 'PENDING',
+        },
+      });
+
+      const memberships = await this.prisma.organizationMember.findMany({
+        where: { userId: user.id },
+        include: { organization: true },
+      });
+
+      // If user has no active memberships or only pending invitations
+      if (memberships.length === 0 && pendingInvites.length > 0) {
+        throw new UnauthorizedException(
+          'Please accept the invitation sent to your email to activate your account before logging in.'
+        );
+      }
+
+      if (memberships.length > 0) {
+        const allSuspended = memberships.every(
+          (m) => m.organization && m.organization.status === 'SUSPENDED'
+        );
+        if (allSuspended) {
+          throw new UnauthorizedException(
+            'Your organization has been suspended by the platform administrator. Access is restricted.'
+          );
+        }
+      }
+    }
+
     const isPasswordValid = await bcrypt.compare(dto.password, user.passwordHash);
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid email or password');

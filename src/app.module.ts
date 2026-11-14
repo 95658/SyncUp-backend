@@ -5,6 +5,7 @@ import { APP_GUARD } from '@nestjs/core';
 // ─── Internal Modules ────────────────────────────────────────────────────────
 import { AppConfigModule } from './config/config.module';
 import { DatabaseModule } from './database/database.module';
+import { MailModule } from './mail/mail.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { OrganizationsModule } from './organizations/organizations.module';
@@ -47,6 +48,7 @@ import { SuperAdminModule } from './super-admin/super-admin.module';
 
     // ─── Core ──────────────────────────────────────────────────────────────────
     DatabaseModule,
+    MailModule,
 
     // ─── Feature Modules ───────────────────────────────────────────────────────
     AuthModule,

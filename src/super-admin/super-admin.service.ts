@@ -4,6 +4,7 @@ import { createHash, randomBytes } from 'crypto';
 import { PrismaService } from '../database/prisma.service';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 import { OrgMemberRole, InvitationTarget, InvitationStatus, OrganizationStatus } from '@prisma/client';
+import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class SuperAdminService {
@@ -12,6 +13,7 @@ export class SuperAdminService {
   constructor(
     private prisma: PrismaService,
     private config: ConfigService,
+    private mailService: MailService,
   ) {}
 
   async createOrganization(dto: CreateOrganizationDto, platformOwnerId: string) {
@@ -106,11 +108,23 @@ export class SuperAdminService {
       return { org, invitation };
     });
 
-    const appUrl = this.config.get<string>('app.url', 'http://localhost:3000');
-    const invitationLink = `${appUrl}/auth/accept-invitation?token=${rawToken}`;
+    const appUrl = this.config.get<string>('app.url', 'https://syncup.syntiqtech.com');
+    const invitationLink = `${appUrl}/auth/accept-invitation?token=${rawToken}&org=${encodeURIComponent(result.org.name)}`;
 
     this.logger.log(`Created Organization: ${result.org.name} (${result.org.id})`);
     this.logger.log(`Generated Admin Invite Link: ${invitationLink}`);
+
+    // Send official invitation email
+    try {
+      await this.mailService.sendOrganizationInvitation({
+        to: dto.adminEmail.toLowerCase().trim(),
+        orgName: result.org.name,
+        invitationLink,
+        expiresAt,
+      });
+    } catch (mailErr) {
+      this.logger.error(`Could not send invitation email: ${mailErr.message}`);
+    }
 
     return {
       organization: result.org,
@@ -165,11 +179,11 @@ export class SuperAdminService {
       pendingInvitations,
       totalTasks,
       systemHealth: '100% Operational',
-      // Requirement 12: ERP financial statistics
-      monthlyRecurringRevenue: Math.max(totalOrgs, 1) * 499,
-      totalRevenue: Math.max(totalOrgs, 1) * 5800 + Math.max(totalUsers, 1) * 120,
-      averageRevenuePerUser: 89,
-      cashFlowGrowth: '+18.4%',
+      // ERP financial statistics (stays $0 until real billing/payments are recorded)
+      monthlyRecurringRevenue: 0,
+      totalRevenue: 0,
+      averageRevenuePerUser: 0,
+      cashFlowGrowth: '0.0%',
     };
   }
 
