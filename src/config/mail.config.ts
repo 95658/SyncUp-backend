@@ -7,4 +7,6 @@ export default registerAs('mail', () => ({
   user: process.env.MAIL_USER,
   password: process.env.MAIL_PASSWORD,
   from: process.env.MAIL_FROM || 'SyncUp <noreply@syncup.com>',
+  resendApiKey: process.env.RESEND_API_KEY,
+  resendFrom: process.env.RESEND_FROM,
 }));

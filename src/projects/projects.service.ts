@@ -16,10 +16,16 @@ export class ProjectsService {
         },
       },
     });
-    if (!member || member.status !== 'ACTIVE') {
-      throw new ForbiddenException('You must be an active member of this organization');
+    if (member && member.status === 'ACTIVE') {
+      return member;
     }
-    return member;
+
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (user?.isPlatformOwner) {
+      return { id: 'platform-owner', userId, organizationId: orgId, role: 'OWNER', status: 'ACTIVE' } as any;
+    }
+
+    throw new ForbiddenException('You must be an active member of this organization');
   }
 
   async findAll(orgId: string, userId: string) {
@@ -86,11 +92,15 @@ export class ProjectsService {
         description: dto.description,
         status: dto.status || 'ACTIVE',
         dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
-        members: {
-          create: {
-            memberId: member.id,
-          },
-        },
+        ...(member.id !== 'platform-owner'
+          ? {
+              members: {
+                create: {
+                  memberId: member.id,
+                },
+              },
+            }
+          : {}),
       },
       include: {
         members: true,

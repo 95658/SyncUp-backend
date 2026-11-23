@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Body, Param, UseGuards, HttpCode, HttpStatus, Query } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, UseGuards, HttpCode, HttpStatus, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 import { SuperAdminService } from './super-admin.service';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
@@ -48,6 +48,15 @@ export class SuperAdminController {
     return this.superAdminService.updateOrganizationStatus(id, status);
   }
 
+  @Delete('organizations/:id')
+  @ApiOperation({ summary: 'Delete an organization (Platform Owner only)' })
+  deleteOrganization(
+    @Param('id') id: string,
+    @CurrentUser('id') platformOwnerId: string,
+  ) {
+    return this.superAdminService.deleteOrganization(id, platformOwnerId);
+  }
+
   @Get('administrators')
   @ApiOperation({ summary: 'List all organization admins across platform (FR-PLAT-005)' })
   getAdministrators() {
@@ -73,6 +82,18 @@ export class SuperAdminController {
   @ApiOperation({ summary: 'List all platform invitations (FR-PLAT-007)' })
   getPlatformInvitations() {
     return this.superAdminService.findAllPlatformInvitations();
+  }
+
+  @Post('invitations/:id/resend')
+  @ApiOperation({ summary: 'Resend platform invitation and return fresh link' })
+  resendInvitation(@Param('id') id: string) {
+    return this.superAdminService.resendPlatformInvitation(id);
+  }
+
+  @Delete('invitations/:id')
+  @ApiOperation({ summary: 'Revoke platform invitation' })
+  revokeInvitation(@Param('id') id: string) {
+    return this.superAdminService.revokePlatformInvitation(id);
   }
 
   @Get('audit-logs')

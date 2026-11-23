@@ -2,10 +2,14 @@ import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/commo
 import { PrismaService } from '../database/prisma.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { TaskStatus } from '@prisma/client';
+import { FcmService } from '../notifications/fcm.service';
 
 @Injectable()
 export class TasksService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private fcmService: FcmService,
+  ) {}
 
   private async assertMember(orgId: string, userId: string) {
     const member = await this.prisma.organizationMember.findUnique({
@@ -16,10 +20,16 @@ export class TasksService {
         },
       },
     });
-    if (!member || member.status !== 'ACTIVE') {
-      throw new ForbiddenException('Access denied: not an active member of this organization');
+    if (member && member.status === 'ACTIVE') {
+      return member;
     }
-    return member;
+
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (user?.isPlatformOwner) {
+      return { id: 'platform-owner', userId, organizationId: orgId, role: 'OWNER', status: 'ACTIVE' } as any;
+    }
+
+    throw new ForbiddenException('Access denied: not an active member of this organization');
   }
 
   async findAllByOrg(orgId: string, userId: string, projectId?: string) {
@@ -78,7 +88,7 @@ export class TasksService {
     });
     if (!project) throw new NotFoundException('Project not found in this organization');
 
-    return this.prisma.task.create({
+    const createdTask = await this.prisma.task.create({
       data: {
         projectId: dto.projectId,
         title: dto.title,
@@ -98,6 +108,23 @@ export class TasksService {
         assignees: true,
       },
     });
+
+    if (dto.assigneeIds && dto.assigneeIds.length > 0) {
+      const targetAssignees = dto.assigneeIds.filter((id) => id !== userId);
+      if (targetAssignees.length > 0) {
+        this.fcmService.sendPushToUsers(targetAssignees, {
+          title: `New Task: ${dto.title}`,
+          body: `You have been assigned to "${dto.title}" in ${project.name}`,
+          data: {
+            taskId: createdTask.id,
+            projectId: dto.projectId,
+            type: 'TASK_ASSIGNED',
+          },
+        }).catch(() => {});
+      }
+    }
+
+    return createdTask;
   }
 
   async updateStatus(orgId: string, taskId: string, status: TaskStatus, userId: string) {

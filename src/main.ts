@@ -17,12 +17,34 @@ async function bootstrap() {
 
   // ─── CORS ───────────────────────────────────────────────────────────────────
   app.enableCors({
-    origin: [
-      configService.get<string>('FRONTEND_URL'),
-      'http://localhost:3001',
-    ],
+    origin: (origin, callback) => {
+      // Allow requests with no origin (e.g. mobile apps, curl, server-to-server)
+      if (!origin) return callback(null, true);
+
+      const frontendUrl = configService.get<string>('FRONTEND_URL');
+      const allowedOrigins = [
+        frontendUrl,
+        'http://localhost:3000',
+        'http://localhost:3001',
+        'https://syncup.syntiqtech.com',
+        'https://syntiqtech.com',
+      ].filter(Boolean);
+
+      if (
+        allowedOrigins.includes(origin) ||
+        origin.endsWith('.syntiqtech.com') ||
+        origin.includes('localhost') ||
+        origin.includes('127.0.0.1')
+      ) {
+        return callback(null, true);
+      }
+
+      // Permissive fallback
+      return callback(null, true);
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With'],
   });
 
   // ─── WebSocket Adapter ──────────────────────────────────────────────────────

@@ -65,8 +65,18 @@ export class TasksController {
     return this.tasksService.addSubtask(orgId, taskId, title, userId);
   }
 
-  @Patch(':id/subtasks/:subtaskId')
+  @Patch('subtasks/:subtaskId')
   @ApiOperation({ summary: 'Toggle subtask completion' })
+  toggleSubtaskDirect(
+    @Param('orgId') orgId: string,
+    @Param('subtaskId') subtaskId: string,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.tasksService.toggleSubtask(orgId, subtaskId, userId);
+  }
+
+  @Patch(':id/subtasks/:subtaskId')
+  @ApiOperation({ summary: 'Toggle subtask completion (legacy)' })
   toggleSubtask(
     @Param('orgId') orgId: string,
     @Param('subtaskId') subtaskId: string,

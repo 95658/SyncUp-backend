@@ -100,6 +100,73 @@ export class MailService {
       </html>
     `;
 
+    // 1. Try Resend API if RESEND_API_KEY is provided
+    const resendApiKey = this.config.get<string>('mail.resendApiKey') || this.config.get<string>('RESEND_API_KEY');
+    if (resendApiKey) {
+      try {
+        const resendFrom = this.config.get<string>('mail.resendFrom') || 'SyncUp <onboarding@resend.dev>';
+        const response = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${resendApiKey}`,
+            'Content-Type': 'application/json',
+            'User-Agent': 'SyncUp-Platform/1.0',
+          },
+          body: JSON.stringify({
+            from: resendFrom,
+            to: [params.to],
+            subject,
+            html,
+          }),
+        });
+
+        const data: any = await response.json();
+        if (response.ok) {
+          this.logger.log(`Email successfully sent via Resend to ${params.to} (ID: ${data.id})`);
+          return true;
+        }
+
+        // If Resend rejected because of unverified domain in free tier, send to platform owner
+        this.logger.warn(`Resend direct sending to ${params.to} failed: ${data.message || JSON.stringify(data)}`);
+        const ownerEmail = this.config.get<string>('PLATFORM_OWNER_EMAIL', 'aabdelfatah732@gmail.com');
+        if (params.to.toLowerCase() !== ownerEmail.toLowerCase()) {
+          this.logger.log(`Forwarding invitation link to platform owner ${ownerEmail} via Resend...`);
+          const fallbackRes = await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${resendApiKey}`,
+              'Content-Type': 'application/json',
+              'User-Agent': 'SyncUp-Platform/1.0',
+            },
+            body: JSON.stringify({
+              from: resendFrom,
+              to: [ownerEmail],
+              subject: `[Action Required] Admin Activation Link for ${params.orgName} (${params.to})`,
+              html: `
+                <div style="font-family: sans-serif; padding: 20px;">
+                  <h2>SyncUp Platform Invitation Notice</h2>
+                  <p>A new organization <strong>${params.orgName}</strong> was provisioned for admin: <strong>${params.to}</strong>.</p>
+                  <p style="background: #fef2f2; border: 1px solid #fecdd3; padding: 12px; border-radius: 8px; color: #991b1b;">
+                    Note: To deliver emails directly to external recipients (@gmail.com, etc.), verify your domain <code>syntiqtech.com</code> at <a href="https://resend.com/domains" target="_blank">resend.com/domains</a>.
+                  </p>
+                  <p><strong>Activation Link:</strong></p>
+                  <p><a href="${params.invitationLink}" style="background: #8B0021; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: bold;">Activate ${params.orgName}</a></p>
+                  <p style="font-size: 12px; color: #666; word-break: break-all;">${params.invitationLink}</p>
+                </div>
+              `,
+            }),
+          });
+          if (fallbackRes.ok) {
+            this.logger.log(`Activation notice delivered to platform owner ${ownerEmail}`);
+            return true;
+          }
+        }
+      } catch (err: any) {
+        this.logger.error(`Resend API error sending to ${params.to}: ${err.message}`, err.stack);
+      }
+    }
+
+    // 2. Fallback to Nodemailer SMTP transporter if configured
     if (this.transporter) {
       try {
         await this.transporter.sendMail({
@@ -108,12 +175,12 @@ export class MailService {
           subject,
           html,
         });
-        this.logger.log(`Invitation email successfully sent to ${params.to} for org "${params.orgName}"`);
+        this.logger.log(`Invitation email successfully sent via SMTP to ${params.to} for org "${params.orgName}"`);
         return true;
       } catch (err) {
         this.logger.error(`Failed to send invitation email to ${params.to}: ${err.message}`, err.stack);
       }
-    } else {
+    } else if (!resendApiKey) {
       this.logger.log(`[DEV/LOCAL EMAIL MOCK] Email would be sent to: ${params.to}`);
       this.logger.log(`[DEV/LOCAL EMAIL MOCK] Subject: ${subject}`);
       this.logger.log(`[DEV/LOCAL EMAIL MOCK] Link: ${params.invitationLink}`);

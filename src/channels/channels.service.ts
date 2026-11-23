@@ -15,10 +15,16 @@ export class ChannelsService {
         },
       },
     });
-    if (!member || member.status !== 'ACTIVE') {
-      throw new ForbiddenException('Access denied: not an active member of this organization');
+    if (member && member.status === 'ACTIVE') {
+      return member;
     }
-    return member;
+
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (user?.isPlatformOwner) {
+      return { id: 'platform-owner', userId, organizationId: orgId, role: 'OWNER', status: 'ACTIVE' } as any;
+    }
+
+    throw new ForbiddenException('Access denied: not an active member of this organization');
   }
 
   async findAllByOrg(orgId: string, userId: string) {

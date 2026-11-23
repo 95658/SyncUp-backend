@@ -1,12 +1,21 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { SendMessageDto } from './dto/send-message.dto';
+import { FcmService } from '../notifications/fcm.service';
 
 @Injectable()
 export class MessagesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private fcmService: FcmService,
+  ) {}
 
   private async assertMember(orgId: string, userId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (user?.isPlatformOwner) {
+      return { id: 'platform-owner', userId, organizationId: orgId, role: 'OWNER', status: 'ACTIVE' } as any;
+    }
+
     const member = await this.prisma.organizationMember.findUnique({
       where: {
         userId_organizationId: {
@@ -58,7 +67,7 @@ export class MessagesService {
     });
     if (!channel) throw new NotFoundException('Channel not found');
 
-    return this.prisma.message.create({
+    const createdMessage = await this.prisma.message.create({
       data: {
         channelId,
         authorId: userId,
@@ -73,6 +82,28 @@ export class MessagesService {
         attachments: { include: { file: true } },
       },
     });
+
+    // Send push notification to channel members asynchronously
+    this.prisma.organizationMember.findMany({
+      where: { organizationId: orgId, userId: { not: userId }, status: 'ACTIVE' },
+      select: { userId: true },
+    }).then((members) => {
+      if (members.length > 0) {
+        const recipientIds = members.map((m) => m.userId);
+        this.fcmService.sendPushToUsers(recipientIds, {
+          title: `#${channel.name} • ${createdMessage.author.fullName}`,
+          body: dto.content,
+          data: {
+            channelId,
+            channelName: channel.name,
+            organizationId: orgId,
+            type: 'NEW_MESSAGE',
+          },
+        }).catch(() => {});
+      }
+    }).catch(() => {});
+
+    return createdMessage;
   }
 
   async toggleReaction(orgId: string, messageId: string, userId: string, emoji: string) {

@@ -1,13 +1,14 @@
-import { Injectable, ConflictException, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createHash, randomBytes } from 'crypto';
+import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../database/prisma.service';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
-import { OrgMemberRole, InvitationTarget, InvitationStatus, OrganizationStatus } from '@prisma/client';
+import { OrgMemberRole, InvitationTarget, InvitationStatus, OrganizationStatus, UserStatus, OrgMemberStatus } from '@prisma/client';
 import { MailService } from '../mail/mail.service';
 
 @Injectable()
-export class SuperAdminService {
+export class SuperAdminService implements OnModuleInit {
   private readonly logger = new Logger(SuperAdminService.name);
 
   constructor(
@@ -15,6 +16,60 @@ export class SuperAdminService {
     private config: ConfigService,
     private mailService: MailService,
   ) {}
+
+  async onModuleInit() {
+    await this.backfillMissingOrgMembers();
+  }
+
+  private async backfillMissingOrgMembers() {
+    try {
+      const orgsWithoutMembers = await this.prisma.organization.findMany({
+        where: {
+          members: {
+            none: {},
+          },
+        },
+        include: {
+          invitations: true,
+        },
+      });
+
+      for (const org of orgsWithoutMembers) {
+        const inv = org.invitations[0];
+        if (!inv) continue;
+
+        let user = await this.prisma.user.findUnique({
+          where: { email: inv.email.toLowerCase().trim() },
+        });
+
+        if (!user) {
+          const passHash = await bcrypt.hash(`${org.name.replace(/\s+/g, '')}#Admin2026!`, 12);
+          user = await this.prisma.user.create({
+            data: {
+              email: inv.email.toLowerCase().trim(),
+              fullName: 'Organization Admin',
+              passwordHash: passHash,
+              status: UserStatus.INACTIVE,
+              jobTitle: 'Organization Owner & Administrator',
+            },
+          });
+        }
+
+        await this.prisma.organizationMember.create({
+          data: {
+            userId: user.id,
+            organizationId: org.id,
+            role: OrgMemberRole.OWNER,
+            status: OrgMemberStatus.ACTIVE,
+          },
+        });
+
+        this.logger.log(`Backfilled admin member for organization "${org.name}" (${user.email})`);
+      }
+    } catch (err) {
+      this.logger.warn(`Backfill missing org members skipped: ${err.message}`);
+    }
+  }
 
   async createOrganization(dto: CreateOrganizationDto, platformOwnerId: string) {
     const slug = dto.name
@@ -70,6 +125,36 @@ export class SuperAdminService {
         },
       });
 
+      // Find or create admin user in INACTIVE status (waiting for invitation acceptance)
+      let adminUser = await tx.user.findUnique({
+        where: { email: dto.adminEmail.toLowerCase().trim() },
+      });
+
+      const initialPassword = `${dto.name.replace(/\s+/g, '')}#Admin2026!`;
+      const passwordHash = await bcrypt.hash(initialPassword, 12);
+
+      if (!adminUser) {
+        adminUser = await tx.user.create({
+          data: {
+            email: dto.adminEmail.toLowerCase().trim(),
+            fullName: dto.adminName.trim() || 'Organization Admin',
+            passwordHash,
+            status: UserStatus.INACTIVE, // Cannot login until invitation accepted
+            jobTitle: 'Organization Owner & Administrator',
+          },
+        });
+      }
+
+      // Create OrganizationMember for this adminUser as OWNER
+      await tx.organizationMember.create({
+        data: {
+          userId: adminUser.id,
+          organizationId: org.id,
+          role: OrgMemberRole.OWNER,
+          status: OrgMemberStatus.ACTIVE,
+        },
+      });
+
       const invitation = await tx.invitation.create({
         data: {
           organizationId: org.id,
@@ -105,11 +190,11 @@ export class SuperAdminService {
         },
       });
 
-      return { org, invitation };
+      return { org, invitation, adminUser };
     });
 
-    const appUrl = this.config.get<string>('app.url', 'https://syncup.syntiqtech.com');
-    const invitationLink = `${appUrl}/auth/accept-invitation?token=${rawToken}&org=${encodeURIComponent(result.org.name)}`;
+    const frontendUrl = this.config.get<string>('app.frontendUrl', 'http://localhost:3000');
+    const invitationLink = `${frontendUrl}/auth/accept-invitation?token=${rawToken}&org=${encodeURIComponent(result.org.name)}`;
 
     this.logger.log(`Created Organization: ${result.org.name} (${result.org.id})`);
     this.logger.log(`Generated Admin Invite Link: ${invitationLink}`);
@@ -291,6 +376,52 @@ export class SuperAdminService {
     });
   }
 
+  async resendPlatformInvitation(invitationId: string) {
+    const inv = await this.prisma.invitation.findUnique({
+      where: { id: invitationId },
+      include: { organization: true },
+    });
+    if (!inv) throw new NotFoundException('Invitation not found');
+
+    const rawToken = randomBytes(32).toString('hex');
+    const tokenHash = createHash('sha256').update(rawToken).digest('hex');
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    await this.prisma.invitation.update({
+      where: { id: invitationId },
+      data: {
+        tokenHash,
+        expiresAt,
+        status: InvitationStatus.PENDING,
+      },
+    });
+
+    const frontendUrl = this.config.get<string>('FRONTEND_URL') || this.config.get<string>('app.frontendUrl', 'http://localhost:3000');
+    const invitationLink = `${frontendUrl}/auth/accept-invitation?token=${rawToken}&org=${encodeURIComponent(inv.organization.name)}`;
+
+    await this.mailService.sendOrganizationInvitation({
+      to: inv.email,
+      orgName: inv.organization.name,
+      invitationLink,
+      expiresAt,
+    }).catch(() => {});
+
+    return {
+      success: true,
+      invitationLink,
+      expiresAt,
+      message: `Invitation resent to ${inv.email}`,
+    };
+  }
+
+  async revokePlatformInvitation(invitationId: string) {
+    const inv = await this.prisma.invitation.findUnique({ where: { id: invitationId } });
+    if (!inv) throw new NotFoundException('Invitation not found');
+
+    await this.prisma.invitation.delete({ where: { id: invitationId } });
+    return { success: true, message: 'Invitation revoked successfully' };
+  }
+
   // FR-AUD-001 & FR-AUD-002: Audit logs
   async findAuditLogs(limit = 100) {
     return this.prisma.activityLog.findMany({
@@ -305,5 +436,60 @@ export class SuperAdminService {
       },
       orderBy: { createdAt: 'desc' },
     });
+  }
+
+  // Delete Organization
+  async deleteOrganization(orgId: string, platformOwnerId: string) {
+    const org = await this.prisma.organization.findUnique({
+      where: { id: orgId },
+      include: {
+        members: {
+          include: {
+            user: {
+              include: {
+                orgMemberships: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!org) {
+      throw new NotFoundException(`Organization with id "${orgId}" not found`);
+    }
+
+    const membersToDelete = org.members;
+
+    await this.prisma.$transaction(async (tx) => {
+      // 1. Audit log before deleting org
+      await tx.activityLog.create({
+        data: {
+          organizationId: org.id,
+          actorId: platformOwnerId,
+          entityType: 'ORGANIZATION',
+          entityId: org.id,
+          action: 'deleted',
+          metadata: { name: org.name, slug: org.slug },
+        },
+      });
+
+      // 2. Delete organization (cascades to members, channels, tasks, invitations, etc.)
+      await tx.organization.delete({
+        where: { id: orgId },
+      });
+
+      // 3. Clean up any users who only belonged to this deleted org and are not platform owners
+      for (const m of membersToDelete) {
+        if (!m.user.isPlatformOwner && m.user.orgMemberships.length <= 1) {
+          await tx.user.delete({
+            where: { id: m.user.id },
+          }).catch(() => null);
+        }
+      }
+    });
+
+    this.logger.log(`Deleted Organization: ${org.name} (${orgId}) by platform owner ${platformOwnerId}`);
+    return { success: true, message: `Organization "${org.name}" deleted successfully` };
   }
 }

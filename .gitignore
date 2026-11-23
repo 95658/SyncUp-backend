@@ -19,6 +19,8 @@ Thumbs.db
 .env.local
 .env.production
 .env.test
+service-account.json
+*firebase-adminsdk*.json
 
 # IDE
 .vscode

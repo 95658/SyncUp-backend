@@ -35,6 +35,14 @@ export class AuthService {
     }
 
     if (user.status !== 'ACTIVE') {
+      const pendingInv = await this.prisma.invitation.findFirst({
+        where: { email: user.email.toLowerCase(), status: 'PENDING' },
+      });
+      if (pendingInv) {
+        throw new UnauthorizedException(
+          'Your account is pending activation. Please accept the invitation link sent to your email to set your password and activate your account.'
+        );
+      }
       throw new UnauthorizedException('Your account has been deactivated. Contact your admin.');
     }
 
@@ -145,13 +153,32 @@ export class AuthService {
             status: 'ACTIVE',
           },
         });
+      } else {
+        user = await tx.user.update({
+          where: { id: user.id },
+          data: {
+            fullName: dto.fullName || user.fullName,
+            passwordHash,
+            status: 'ACTIVE',
+          },
+        });
       }
 
-      // Create org membership
-      const membership = await tx.organizationMember.create({
-        data: {
+      // Upsert org membership (ensures pre-created owner member is activated)
+      const membership = await tx.organizationMember.upsert({
+        where: {
+          userId_organizationId: {
+            userId: user.id,
+            organizationId: invitation.organizationId,
+          },
+        },
+        create: {
           userId: user.id,
           organizationId: invitation.organizationId,
+          role: invitation.role,
+          status: 'ACTIVE',
+        },
+        update: {
           role: invitation.role,
           status: 'ACTIVE',
         },

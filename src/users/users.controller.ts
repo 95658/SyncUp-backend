@@ -18,6 +18,12 @@ export class UsersController {
     return this.usersService.findById(userId);
   }
 
+  @Get('me')
+  @ApiOperation({ summary: 'Get current user profile (alias)' })
+  getMe(@CurrentUser('id') userId: string) {
+    return this.usersService.findById(userId);
+  }
+
   @Patch('profile')
   @ApiOperation({ summary: 'Update current user profile' })
   updateProfile(@CurrentUser('id') userId: string, @Body() dto: UpdateProfileDto) {

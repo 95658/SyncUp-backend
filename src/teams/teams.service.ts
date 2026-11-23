@@ -7,7 +7,7 @@ import {
 import { PrismaService } from '../database/prisma.service';
 import { CreateTeamDto } from './dto/create-team.dto';
 import { AddTeamMemberDto } from './dto/add-team-member.dto';
-import { OrgMemberRole } from '@prisma/client';
+import { OrgMemberRole, OrgMemberStatus } from '@prisma/client';
 
 @Injectable()
 export class TeamsService {
@@ -23,18 +23,19 @@ export class TeamsService {
       },
     });
 
-    if (!member || member.status !== 'ACTIVE') {
-      throw new ForbiddenException('You are not an active member of this organization');
-    }
-
-    if (allowedRoles && !allowedRoles.includes(member.role)) {
-      const user = await this.prisma.user.findUnique({ where: { id: userId } });
-      if (!user?.isPlatformOwner) {
+    if (member && member.status === 'ACTIVE') {
+      if (allowedRoles && !allowedRoles.includes(member.role)) {
         throw new ForbiddenException(`Requires one of these roles: ${allowedRoles.join(', ')}`);
       }
+      return member;
     }
 
-    return member;
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (user?.isPlatformOwner) {
+      return { id: 'platform-owner', userId, organizationId: orgId, role: OrgMemberRole.OWNER, status: OrgMemberStatus.ACTIVE } as any;
+    }
+
+    throw new ForbiddenException('You are not an active member of this organization');
   }
 
   async findAll(orgId: string, userId: string) {
